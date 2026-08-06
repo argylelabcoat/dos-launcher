@@ -1,0 +1,43 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Turbo Pascal–dialect Pascal for the DOS target (compiles with
+  Turbo Pascal 7 or Free Pascal i8086-msdos, TP mode), BGI graphics in
+  VGA 640x480 16-color mode. The companion editor is a Lazarus/FPC desktop
+  application that shares Pascal units with the DOS code where possible.
+  Platform: 16-bit real-mode DOS on 8088-class hardware (Book-8088).
+  Runtime files: LAUNCHER.DAT (custom RIFF container, form type 'RCLF'),
+  a BGI driver such as EGAVGA.BGI, and C:\SWAP.TMP for swap-to-disk exec.
+
+  Conventions:
+  - Turbo Pascal dialect: program/unit structure, short strings (string[N]),
+    {$I-}/{$I+} around I/O with IOResult checks — never exceptions.
+  - CamelCase for procedures/functions/types (T-prefixed types), UPPER_SNAKE
+    for constants; FourCCs compared with SameFourCC, not direct =.
+  - Memory-constrained mindset: fixed-size buffers (MAX_APPS = 50), minimal
+    heap use, icons pre-decoded once at load time.
+  - Comments in English { ... } braces explaining WHY (hardware/DOS rationale).
+  - Direct hardware/low-level access (Port[], Mem[], PrefixSeg, HeapPtr) is
+    idiomatic — do not abstract it away in DOS code.
+  - Do not modernize DOS code (no managed strings, classes, exceptions); it
+    must stay compilable for 16-bit real-mode DOS. Editor-side code may use
+    modern FPC/Lazarus idioms, but any shared unit must remain TP-compatible
+    so both sides agree byte-for-byte on on-disk record layouts.
+  - On-disk RCLF records are packed ({$PACKRECORDS 1} under FPC) and use
+    Turbo Pascal short strings (1 length byte + N bytes), little-endian.
+
+  Source layout: all Pascal sources live in snips/ (launcher.pas main
+  program; RiffLauncher, RiffBgiIcon, ExecSwap units; RiffDOSParser and
+  PCX16Decoder standalone utilities). There is no build system or test
+  suite; verification is manual via the utility programs and emulators
+  (DOSBox/86Box/Book-8088).
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours

@@ -1,0 +1,6 @@
+RIFF Container Verified. Parsing Chunks...
+App Count: 12
+--- App Entry ---
+Loaded App: Game 1
+  [Icon Data Streamed: 640 bytes]
+--- App Entry ---

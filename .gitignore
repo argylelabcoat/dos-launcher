@@ -1,0 +1,9 @@
+.claude/
+*.o
+*.ppu
+*.or
+
+# Installed FPC i8086-msdos cross-compiler toolchain (51MB, fully regenerable
+# via the `make crossinstall CPU_TARGET=i8086 OS_TARGET=msdos` command
+# documented in openspec/specs/rclf-format-and-loader-hardening/tasks/03-verification.md)
+dosbox-verify/fpc-i8086-install/
