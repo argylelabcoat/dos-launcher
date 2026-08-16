@@ -450,19 +450,22 @@ var
   ScanCode: Byte;
   Done: Boolean;
   SwapRes: Integer;
+  OldPage, OldIndex: Integer;
 begin
   CurrentIndex := 0;
   CurrentPage  := 0;
   Done         := False;
 
+  DrawFullPage;
+
   while not Done do
   begin
-    DrawFullPage;
-
     Ch := ReadKey;
     if Ch = #0 then
     begin
       ScanCode := Ord(ReadKey);
+      OldPage  := CurrentPage;
+      OldIndex := CurrentIndex;
       case ScanCode of
         72: { UP Arrow }
           if CurrentIndex > 0 then
@@ -489,6 +492,13 @@ begin
             CurrentIndex := CurrentPage * ITEMS_PER_PAGE;
           end;
       end;
+
+      { Redraw: full page if the page changed, else just the two
+        affected rows if the index changed within the same page. }
+      if CurrentPage <> OldPage then
+        DrawFullPage
+      else if CurrentIndex <> OldIndex then
+        UpdateSelection(OldIndex, CurrentIndex);
     end;
 
     { Keyrepeat flush so holding keys down doesn't queue inputs on slow 8088 }
@@ -518,6 +528,7 @@ begin
 
         { Re-init graphics mode upon game exit }
         InitGraph(Gd, Gm, '');
+        DrawFullPage;
       end;
     end;
 
