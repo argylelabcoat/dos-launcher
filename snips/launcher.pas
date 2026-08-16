@@ -323,11 +323,12 @@ begin
 end;
 
 { --- Rendering Loop --- }
-procedure DrawScreen;
+procedure DrawFullPage;
 var
   i, PageStart, PageEnd, YPos, LocalIndex : Integer;
 begin
-  ClearDevice;
+  SetFillStyle(SolidFill, Black);
+  Bar(0, 0, 639, 479);
 
   { Header Bar }
   SetColor(Yellow);
@@ -346,6 +347,7 @@ begin
   if PageEnd >= TotalApps then PageEnd := TotalApps - 1;
 
   YPos := START_Y;
+  SetTextStyle(DefaultFont, HorizDir, 1);
 
   for i := PageStart to PageEnd do
   begin
@@ -366,12 +368,17 @@ begin
 
     { App Title }
     if LocalIndex = CurrentIndex then SetColor(White) else SetColor(LightGray);
-    SetTextStyle(DefaultFont, HorizDir, 1);
     OutTextXY(60, YPos + 4, AppList^[LocalIndex].Title);
 
     { App Description }
     SetColor(DarkGray);
     OutTextXY(60, YPos + 20, AppList^[LocalIndex].Desc);
+
+    { Row separator: thin line below each row's content, in the inter-row gap,
+      so each row is visually bounded even without a selection box. Drawn for
+      all rows including the last on the page for a clean bottom edge. }
+    SetColor(DarkGray);
+    Line(16, YPos + 40, 624, YPos + 40);
 
     Inc(YPos, ROW_HEIGHT);
   end;
@@ -396,7 +403,7 @@ begin
 
   while not Done do
   begin
-    DrawScreen;
+    DrawFullPage;
 
     Ch := ReadKey;
     if Ch = #0 then
