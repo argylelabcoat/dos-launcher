@@ -29,26 +29,50 @@ type
     Padding      : array[0..57] of Byte;
   end;
 
-  { 516-byte BGI PutImage buffer, indexed byte-by-byte while decoding. }
-  PBgiByteBuffer = ^TBgiByteBuffer;
-  TBgiByteBuffer = array[0..515] of Byte;
+  { FPC's Graph unit does NOT use the classic Borland BGI packed-bitplane
+    image format. Per DefaultGetImage/DefaultPutImage in
+    packages/graph/src/inc/graph.inc, the buffer PutImage expects is:
+      - a 12-byte header: three LongInts (Width, Height, Reserved) --
+        NOT the 4-byte "Width-1/Height-1 word pair" real BGI uses;
+      - pixel data as one Word (raw color index) per pixel, raster
+        order -- NOT 1-bit-per-plane packed bitplanes.
+    Modeled here as a single Word array overlaying the whole buffer
+    (words 0..2 double as the LongInt header via a second typed view at
+    the same address), mirroring how graph.inc itself accesses it. }
+
+const
+  BGI_IMG_W          = 32;
+  BGI_IMG_H          = 32;
+  BGI_HEADER_WORDS   = 6; { 3 LongInts }
+  BGI_PIXEL_COUNT    = BGI_IMG_W * BGI_IMG_H;
+  BGI_BUFFER_WORDS   = BGI_HEADER_WORDS + BGI_PIXEL_COUNT;
+  BGI_BUFFER_BYTES   = BGI_BUFFER_WORDS * 2; { 2060; SizeOf(Word) }
+
+type
+  PBgiWordBuffer = ^TBgiWordBuffer;
+  TBgiWordBuffer = array[0..BGI_BUFFER_WORDS - 1] of Word;
+
+  PBgiHeaderView = ^TBgiHeaderView;
+  TBgiHeaderView = array[0..2] of LongInt;
 
 procedure FreeBgiIcon(pIcon: Pointer);
 begin
   if pIcon <> nil then
-    FreeMem(pIcon, 516); { 516 bytes for 32x32 16-color BGI buffer }
+    FreeMem(pIcon, BGI_BUFFER_BYTES);
 end;
 
 function LoadRiffIconToBGI(var F: file; ChunkSize: LongInt): Pointer;
 var
   Header            : TPCXHeader;
   pBgiBuffer        : Pointer;
-  pByteArray        : PBgiByteBuffer;
+  pWordArray        : PBgiWordBuffer;
+  pHeaderView       : PBgiHeaderView;
   ScanLineBuffer    : array[0..3, 0..3] of Byte; { 4 planes x 4 bytes per plane }
   Plane, LineByte   : Integer;
-  PixelY, ImageWidth, ImageHeight : Integer;
+  PixelX, PixelY, ImageWidth, ImageHeight : Integer;
   TotalBytesPerLine, BytesReadCount : Word;
   Value, RunLen     : Byte;
+  ColorIndex        : Byte;
   BgiOffset         : Word;
 
   procedure GetNextByte(var B: Byte);
@@ -71,25 +95,25 @@ begin
   { Ensure image is 32x32 }
   if (ImageWidth <> 32) or (ImageHeight <> 32) then Exit;
 
-  { BytesPerLine must be exactly 4 for a 32px-wide 1bpp image (32/8=4).
-    A larger value would overflow the fixed 516-byte BGI buffer. }
+  { BytesPerLine must be exactly 4 for a 32px-wide 1bpp image (32/8=4);
+    ScanLineBuffer below is sized for exactly that. }
   if Header.BytesPerLine <> 4 then Exit;
 
-  { 2. Allocate Heap Memory for 32x32 16-color BGI Image Buffer (516 Bytes) }
-  GetMem(pBgiBuffer, 516);
-  pByteArray := pBgiBuffer;
+  { 2. Allocate Heap Memory for the FPC Graph-unit-format Image Buffer }
+  GetMem(pBgiBuffer, BGI_BUFFER_BYTES);
+  pWordArray  := pBgiBuffer;
+  pHeaderView := pBgiBuffer;
 
   { Zero the buffer so a short/truncated RLE stream renders as black (color 0)
     instead of uninitialized heap garbage that shows as random colored pixels. }
-  FillChar(pBgiBuffer^, 516, 0);
+  FillChar(pBgiBuffer^, BGI_BUFFER_BYTES, 0);
 
-  { 3. Initialize BGI Header (Width - 1, Height - 1) }
-  pByteArray^[0] := 31; { Width - 1 (Low Byte) }
-  pByteArray^[1] := 0;  { Width - 1 (High Byte) }
-  pByteArray^[2] := 31; { Height - 1 (Low Byte) }
-  pByteArray^[3] := 0;  { Height - 1 (High Byte) }
+  { 3. Initialize the 12-byte (Width, Height, Reserved) LongInt header. }
+  pHeaderView^[0] := BGI_IMG_W;
+  pHeaderView^[1] := BGI_IMG_H;
+  pHeaderView^[2] := 0;
 
-  BgiOffset := 4; { Start writing pixel data past the 4-byte header }
+  BgiOffset := BGI_HEADER_WORDS; { Start writing pixel words past the header }
   TotalBytesPerLine := Header.NPlanes * Header.BytesPerLine; { 4 * 4 = 16 bytes }
 
   { 4. Decode PCX RLE Scanlines directly into BGI Bitplane layout }
@@ -121,15 +145,18 @@ begin
       end;
     end;
 
-    { 5. Copy scanline bitplanes straight into BGI memory buffer.
-         BGI stores VGA 16-color scanlines sequentially as Plane0, Plane1, Plane2, Plane3 }
-    for Plane := 0 to 3 do
+    { 5. Combine the 4 decoded 1bpp planes into one chunky color-index Word
+         per pixel (standard VGA planar-to-chunky: bit N of the pixel's
+         4-bit color index comes from plane N's bit for that pixel),
+         written left-to-right -- the raster-order format PutImage expects. }
+    for PixelX := 0 to ImageWidth - 1 do
     begin
-      for LineByte := 0 to Header.BytesPerLine - 1 do
-      begin
-        pByteArray^[BgiOffset] := ScanLineBuffer[Plane, LineByte];
-        Inc(BgiOffset);
-      end;
+      ColorIndex := 0;
+      for Plane := 0 to Header.NPlanes - 1 do
+        if (ScanLineBuffer[Plane, PixelX shr 3] and ($80 shr (PixelX and 7))) <> 0 then
+          ColorIndex := ColorIndex or (1 shl Plane);
+      pWordArray^[BgiOffset] := ColorIndex;
+      Inc(BgiOffset);
     end;
   end;
 

@@ -8,7 +8,7 @@ The launcher:
 
 - Reads game/app metadata and icons from a single RIFF container file (`LAUNCHER.DAT`, custom form type `RCLF`).
 - Renders a paginated, keyboard-driven menu (arrows to navigate, ENTER to launch, ESC to quit).
-- Pre-decodes 32x32 16-color PCX icons into raw 516-byte BGI `PutImage` RAM buffers for instant blitting.
+- Pre-decodes 32x32 16-color PCX icons into raw `PutImage` RAM buffers for instant blitting.
 - When launching a game, swaps its own entire memory image (PSP + code + data + heap) out to a disk swap file (`C:\SWAP.TMP`), runs the game with `Dos.Exec`, then reloads itself — freeing ~550KB of conventional RAM for the child program.
 
 The `snips/` directory contains the complete source. There is no build system, package manifest, or test suite in the repo — these are source "snippets" intended to be compiled with an external DOS Pascal toolchain.
@@ -33,7 +33,9 @@ Defined by `RiffLauncher` unit:
 
 ### Icon pipeline
 
-`ICON` chunks embed a standard 16-color planar PCX (32x32, 4 bitplanes, RLE-encoded). `RiffBgiIcon.LoadRiffIconToBGI` decodes the RLE stream directly into the BGI `PutImage` memory layout (4-byte width/height header followed by per-scanline Plane0..Plane3 bytes), so icons can be blitted with a single `PutImage` call at draw time with no per-frame decoding.
+`ICON` chunks embed a standard 16-color planar PCX (32x32, 4 bitplanes, RLE-encoded). `RiffBgiIcon.LoadRiffIconToBGI` decodes the RLE stream and re-packs it into the memory layout FPC's `Graph` unit's `PutImage` actually expects, so icons can be blitted with a single `PutImage` call at draw time with no per-frame decoding.
+
+**Important:** FPC's `Graph` unit (`packages/graph/src/inc/graph.inc`, `DefaultGetImage`/`DefaultPutImage` — used as-is for the `msdos`/`i8086` target, no override) does **not** use real Borland BGI's packed-bitplane `GetImage`/`PutImage` binary format. It uses its own: a 12-byte header (three `LongInt`s — Width, Height, Reserved) followed by one `Word` (raw color index) per pixel in raster order — not the 4-byte "Width-1/Height-1 word pair" + 1-bit-per-plane packed bitplanes real BGI uses. `RiffBgiIcon.pas` targets FPC's format specifically. This means the "Free Pascal in TP mode" and "Turbo Pascal 7 / Borland Pascal" compatible-target claim above does **not** extend to icon rendering — a real TP7/Borland BGI build would need a different `LoadRiffIconToBGI` implementation (real BGI's packed-plane format) to display icons correctly, even though the rest of the codebase is source-compatible with both.
 
 ## Source layout (all under `snips/`)
 
@@ -83,7 +85,7 @@ See `dosbox-verify/README.md` for building the RTL/compiler itself and for runni
 - Memory-constrained mindset: fixed-size buffers and arrays (`MAX_APPS = 50`), minimal heap use, icons pre-decoded once at load time, key-repeat flushed with `while KeyPressed do ReadKey;` for slow 8088 CPUs.
 - Comments are in English, in `{ ... }` braces, and typically explain *why* (hardware/DOS rationale) rather than *what*.
 - Direct hardware/low-level access (`Port[]`, `Mem[]`, `PrefixSeg`, `HeapPtr`) is normal and idiomatic here — do not abstract it away.
-- Buffers sized for exact formats (e.g. 516-byte BGI icon) use literal sizes documented in comments; keep them in sync when touching icon code.
+- Buffers sized for exact formats (e.g. the 2060-byte FPC `PutImage` icon buffer, see `RiffBgiIcon.pas`) use literal/derived sizes documented in comments; keep them in sync when touching icon code.
 
 ## Testing
 

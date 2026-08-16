@@ -18,7 +18,7 @@ type
     ExecPath : string[64];
     Args     : string[64];
     Flags    : Word;    { Copied from TAppInfo.Flags: Bit 0 = Pause on exit, Bit 1 = Clear screen }
-    pBgiIcon : Pointer; { Pre-loaded 516-byte BGI RAM buffer }
+    pBgiIcon : Pointer; { Pre-loaded 2060-byte FPC Graph-unit PutImage buffer (see RiffBgiIcon.pas) }
   end;
   TAppEntryArray = array[0..MAX_APPS - 1] of TAppEntry;
   PAppEntryArray = ^TAppEntryArray;
