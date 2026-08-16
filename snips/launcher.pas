@@ -389,6 +389,50 @@ begin
   OutTextXY(16, 460, '[UP/DOWN] Select   [LEFT/RIGHT] Page   [ENTER] Play Game');
 end;
 
+{ --- Single-Row Repaint (for dirty-rectangle navigation) ---
+  Draws one row at the given index in the given selection state. Does NOT
+  clear the screen — fills only the row's content area with black, then
+  redraws the box/icon/text/separator for that row. Used by UpdateSelection
+  for same-page UP/DOWN moves. }
+procedure DrawRow(RowIndex: Integer; Selected: Boolean);
+var
+  YPos : Integer;
+begin
+  YPos := START_Y + (RowIndex - CurrentPage * ITEMS_PER_PAGE) * ROW_HEIGHT;
+
+  { Erase: fill the row's content area with black regardless of prior state.
+    Solid-fill Bar writes all 4 VGA planes in one pass — cheap, and avoids
+    tracking "was this row selected before". }
+  SetFillStyle(SolidFill, Black);
+  Bar(12, YPos - 4, 628, YPos + 36);
+
+  { Selection box (if selected) }
+  if Selected then
+  begin
+    SetColor(Yellow);
+    Rectangle(12, YPos - 4, 628, YPos + 36);
+    SetFillStyle(SolidFill, Blue);
+    Bar(13, YPos - 3, 627, YPos + 35);
+  end;
+
+  { Blit 32x32 Icon }
+  if AppList^[RowIndex].pBgiIcon <> nil then
+    PutImage(16, YPos, AppList^[RowIndex].pBgiIcon^, NormalPut);
+
+  { App Title }
+  SetTextStyle(DefaultFont, HorizDir, 1);
+  if Selected then SetColor(White) else SetColor(LightGray);
+  OutTextXY(60, YPos + 4, AppList^[RowIndex].Title);
+
+  { App Description }
+  SetColor(DarkGray);
+  OutTextXY(60, YPos + 20, AppList^[RowIndex].Desc);
+
+  { Row separator line }
+  SetColor(DarkGray);
+  Line(16, YPos + 40, 624, YPos + 40);
+end;
+
 { --- Main Event Loop --- }
 procedure RunLauncher;
 var
