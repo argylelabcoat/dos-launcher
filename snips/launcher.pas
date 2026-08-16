@@ -433,6 +433,16 @@ begin
   Line(16, YPos + 40, 624, YPos + 40);
 end;
 
+{ --- Same-page selection move: repaint only the old and new rows ---
+  Called by RunLauncher when CurrentIndex changes but CurrentPage does not.
+  Redraws the old row in unselected state and the new row in selected state.
+  No screen clear — just two DrawRow calls. }
+procedure UpdateSelection(OldIndex, NewIndex: Integer);
+begin
+  DrawRow(OldIndex, False);
+  DrawRow(NewIndex, True);
+end;
+
 { --- Main Event Loop --- }
 procedure RunLauncher;
 var
