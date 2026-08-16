@@ -1,0 +1,50 @@
+# Example manifest for LauncherCli. Build it with:
+#   editor/LauncherCli editor/examples/manifest.yaml -o LAUNCHER.DAT
+# Icon PNGs are sourced from Anthony's Icon Library (../aicons relative to
+# this repo checkout) via ImageMagick XPM->PNG conversion; LauncherCli's
+# PngLoader then quantizes each to the fixed 16-color VGA palette and
+# encodes it as a planar RLE PCX icon chunk.
+apps:
+  - title: "Rocket Ranger"
+    desc: "Blast off into adventure"
+    exec: "C:\GAMES\ROCKET\ROCKET.EXE"
+    args: ""
+    pause_on_exit: true
+    clear_screen: false
+    icon: "icons/rocket.png"
+  - title: "Star Voyager"
+    desc: "Explore the galaxy"
+    exec: "C:\GAMES\VOYAGER\VOYAGER.EXE"
+    args: "-fast"
+    pause_on_exit: true
+    clear_screen: true
+    icon: "icons/spaceship.png"
+  - title: "World Tour"
+    desc: "A trip around the globe"
+    exec: "C:\GAMES\WORLD\WORLD.EXE"
+    args: ""
+    icon: "icons/globe.png"
+  - title: "Money Bags"
+    desc: "Tycoon simulation"
+    exec: "C:\GAMES\MONEY\MONEY.EXE"
+    args: ""
+    icon: "icons/money.png"
+  - title: "Party Time"
+    desc: "Celebration minigame collection"
+    exec: "C:\GAMES\PARTY\PARTY.EXE"
+    args: ""
+    icon: "icons/balloons2.png"
+  - title: "The Vault"
+    desc: "Escape-room puzzler"
+    exec: "C:\GAMES\VAULT\VAULT.EXE"
+    args: ""
+    icon: "icons/door_open.png"
+  - title: "Camera Obscura"
+    desc: "Photography puzzle game"
+    exec: "C:\GAMES\CAMERA\CAMERA.EXE"
+    args: ""
+    icon: "icons/video_camera.png"
+  - title: "Text Adventure"
+    desc: "No icon -- classic interactive fiction"
+    exec: "C:\GAMES\TEXTADV\TEXTADV.EXE"
+    args: ""

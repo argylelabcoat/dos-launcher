@@ -2,6 +2,12 @@
 *.o
 *.ppu
 *.or
+__pycache__/
+
+# Compiled host-side (not DOS) binaries -- regenerate via fpc, see
+# editor/README.md.
+editor/LauncherCli
+editor/tests/TestRunner
 
 # Installed FPC i8086-msdos cross-compiler toolchain (51MB, fully regenerable
 # via the `make crossinstall CPU_TARGET=i8086 OS_TARGET=msdos` command

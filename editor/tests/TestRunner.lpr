@@ -8,7 +8,9 @@ uses
   TestLauncherDoc,
   TestRiffReader,
   TestRiffWriter,
-  TestIconConvert;
+  TestIconConvert,
+  TestYamlManifest,
+  TestPngLoader;
 
 var
   App: TTestRunner;

@@ -48,6 +48,10 @@ Defined by `RiffLauncher` unit:
 
 `launcher.pas` depends on the three units (`RiffLauncher`, `RiffBgiIcon`, `ExecSwap`); the two utility programs depend only on `RiffLauncher`.
 
+## `editor/` (host-side, not DOS)
+
+A separate Lazarus/FPC host-side tool (GUI + CLI) for *authoring* `LAUNCHER.DAT` files — distinct from everything above, which is DOS-target real-mode code. See `editor/README.md` for the CLI (`LauncherCli`, YAML manifest + PNG icons → `LAUNCHER.DAT`) and `openspec/changes/launcher-editor/design.md` for the GUI's design.
+
 ## Build
 
 Build with an FPC `i8086-msdos` cross compiler (Turbo Pascal 7 in DOS/DOSBox also works, but isn't scripted here). Two scripts drive the whole thing:
