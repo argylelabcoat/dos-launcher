@@ -98,6 +98,20 @@ TP7-compatible VGA driver — no `.BGI` driver files or Turbo Pascal needed):
       -Fu$UNITS/rtl -Fu$UNITS/rtl-console -Fu$UNITS/rtl-extra -Fu$UNITS/rtl-objpas -Fu$UNITS/graph \
       -Fusnips -FE<outdir> snips/launcher.pas
 
+> **Update (Apple Silicon macOS, FPC 3.2.2):** the `make crossinstall`
+> step above needs several additional flags to work on modern Apple
+> Silicon/Xcode setups that this note predates — a modern-Xcode linker
+> workaround, NASM (not GNU binutils) as the assembler, and an FPC
+> Makefile flag-scoping fix (`OPTLEVEL2`) for `-dFPC_SOFT_FPUX80`. See
+> `AGENTS.md`'s Build section and `./scripts/build-cross-compiler.sh`,
+> which encodes the full working command — use that script rather than
+> the bare `make crossinstall` line above. The compile command for
+> `launcher.pas` itself is unchanged in spirit; `./scripts/build.sh` runs
+> the current version (adds `-Mtp -CX -XX -Xs` and `-FD<nasm dir>`).
+> Also: `RiffBgiIcon.pas` needed a fix (`p[i]` → `p^[i]` pointer-to-array
+> indexing, a real-TP requirement under `-Mtp`) to actually compile —
+> this had never been caught before a working cross compiler existed.
+
 This compiles and links a real DOS `.exe` (confirmed MZ header). Run under
 DOSBox-X (`/Applications/DOSBox-X.app/Contents/MacOS/dosbox-x`, headless via
 `-c`/`-silent`/`-time-limit`): with a real `LAUNCHER.DAT`, it runs without

@@ -29,6 +29,10 @@ type
     Padding      : array[0..57] of Byte;
   end;
 
+  { 516-byte BGI PutImage buffer, indexed byte-by-byte while decoding. }
+  PBgiByteBuffer = ^TBgiByteBuffer;
+  TBgiByteBuffer = array[0..515] of Byte;
+
 procedure FreeBgiIcon(pIcon: Pointer);
 begin
   if pIcon <> nil then
@@ -39,7 +43,7 @@ function LoadRiffIconToBGI(var F: file; ChunkSize: LongInt): Pointer;
 var
   Header            : TPCXHeader;
   pBgiBuffer        : Pointer;
-  pByteArray        : ^Byte;
+  pByteArray        : PBgiByteBuffer;
   ScanLineBuffer    : array[0..3, 0..3] of Byte; { 4 planes x 4 bytes per plane }
   Plane, LineByte   : Integer;
   PixelY, ImageWidth, ImageHeight : Integer;
@@ -67,15 +71,23 @@ begin
   { Ensure image is 32x32 }
   if (ImageWidth <> 32) or (ImageHeight <> 32) then Exit;
 
+  { BytesPerLine must be exactly 4 for a 32px-wide 1bpp image (32/8=4).
+    A larger value would overflow the fixed 516-byte BGI buffer. }
+  if Header.BytesPerLine <> 4 then Exit;
+
   { 2. Allocate Heap Memory for 32x32 16-color BGI Image Buffer (516 Bytes) }
   GetMem(pBgiBuffer, 516);
   pByteArray := pBgiBuffer;
 
+  { Zero the buffer so a short/truncated RLE stream renders as black (color 0)
+    instead of uninitialized heap garbage that shows as random colored pixels. }
+  FillChar(pBgiBuffer^, 516, 0);
+
   { 3. Initialize BGI Header (Width - 1, Height - 1) }
-  pByteArray[0] := 31; { Width - 1 (Low Byte) }
-  pByteArray[1] := 0;  { Width - 1 (High Byte) }
-  pByteArray[2] := 31; { Height - 1 (Low Byte) }
-  pByteArray[3] := 0;  { Height - 1 (High Byte) }
+  pByteArray^[0] := 31; { Width - 1 (Low Byte) }
+  pByteArray^[1] := 0;  { Width - 1 (High Byte) }
+  pByteArray^[2] := 31; { Height - 1 (Low Byte) }
+  pByteArray^[3] := 0;  { Height - 1 (High Byte) }
 
   BgiOffset := 4; { Start writing pixel data past the 4-byte header }
   TotalBytesPerLine := Header.NPlanes * Header.BytesPerLine; { 4 * 4 = 16 bytes }
@@ -115,7 +127,7 @@ begin
     begin
       for LineByte := 0 to Header.BytesPerLine - 1 do
       begin
-        pByteArray[BgiOffset] := ScanLineBuffer[Plane, LineByte];
+        pByteArray^[BgiOffset] := ScanLineBuffer[Plane, LineByte];
         Inc(BgiOffset);
       end;
     end;

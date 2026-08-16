@@ -48,17 +48,33 @@ Defined by `RiffLauncher` unit:
 
 ## Build
 
-There is no build script or manifest in the repository. To build, use a DOS Pascal compiler (Turbo Pascal 7 in DOS, or Free Pascal cross-compiling to `i8086-msdos`), compiling `snips/launcher.pas` as the main program with `snips/` on the unit search path. Examples (not provided by the repo):
+Build with an FPC `i8086-msdos` cross compiler (Turbo Pascal 7 in DOS/DOSBox also works, but isn't scripted here). Two scripts drive the whole thing:
 
 ```sh
-# Free Pascal (TP-compatible mode is already set via {$MODE TP} in the source)
-fpc -Mtp snips/launcher.pas
-
-# Turbo Pascal 7 (inside DOS / DOSBox)
-tpc snips\launcher.pas
+./scripts/build-cross-compiler.sh   # one-time: builds ppcross8086 into dosbox-verify/fpc-i8086-install/ (gitignored, ~few minutes)
+./scripts/build.sh                  # builds launcher.exe + RiffDOSParser.exe, drops them into dosbox-verify/{launcher_root,dosroot}/
 ```
 
-Units not carrying their own `{$MODE TP}` directive may need `-Mtp` passed explicitly under FPC.
+`build-cross-compiler.sh` assumes fpcupdeluxe (https://github.com/LongDirtyAnimAlf/fpcupdeluxe) already installed a native FPC at `/Applications/fpcupdeluxe` (override via `FPCUP_ROOT`/`FPCSRC`/`HOST_FPC` env vars). On Apple Silicon macOS, fpcupdeluxe's own GUI cross-compiler builder does **not** work for this target — it fails with a misleading `ERROR: Failed to get crossbinutils` — so these scripts drive FPC's `make crossinstall` directly instead. The real requirements it's working around, in case you need to debug a variant of this yourself:
+
+- **NASM, not GNU binutils.** FPC's i8086-msdos backend emits NASM-syntax assembly and links with its own internal linker; it has no use for `as`/`ld`. It also shells out to a binary literally named `msdos-nasm` when building the RTL — `build-cross-compiler.sh` installs `nasm` via Homebrew and symlinks the alias.
+- **Modern Xcode's linker breaks the native bootstrap stage.** Every cross-compiler build first re-verifies FPC's own native host compiler; on recent Xcode this fails linking with `ld: library 'c' not found` (the newer default linker, ld-prime, being stricter than this FPC version expects). Fixed with `-XR<CommandLineTools SDK> -k-ld_classic`.
+- **`-dFPC_SOFT_FPUX80` must be scoped to only the i8086-targeting build stage.** The i8086 compiler needs this 80-bit-float software-emulation define, but setting it globally breaks the native aarch64 bootstrap stage instead (`Can't find unit sfpux80`). FPC's `compiler/Makefile` has a dedicated hook for this most guides don't mention: `OPTLEVEL2`, which only applies to `CYCLELEVEL=2` (the stage that actually targets your chosen CPU/OS).
+
+Manual command, once the cross compiler exists (what `build.sh` runs):
+
+```sh
+PPC=dosbox-verify/fpc-i8086-install/lib/fpc/<version>/ppcross8086
+UNITS=dosbox-verify/fpc-i8086-install/lib/fpc/<version>/units/msdos
+$PPC -Tmsdos -Pi8086 -Mtp -WmLarge -CX -XX -Xs \
+  -FD<dir containing nasm> \
+  -Fu$UNITS/rtl -Fu$UNITS/rtl-console -Fu$UNITS/rtl-extra -Fu$UNITS/rtl-objpas -Fu$UNITS/graph \
+  -Fusnips -FE<outdir> snips/launcher.pas
+```
+
+`-Mtp` matters beyond matching `launcher.pas`'s own `{$MODE TP}` directive: real Turbo Pascal (and FPC's `-Mtp` emulation of it) requires an explicit `^` when indexing a pointer-to-array (`p^[i]`) — the `p[i]` shorthand is an FPC/Delphi-mode extension TP doesn't have. `-Fu$UNITS/graph` (FPC's bundled `graph` package, a from-scratch TP7-compatible VGA driver — no `.BGI` files or Turbo Pascal needed) is only required for `launcher.pas`/`RiffBgiIcon.pas`; drop it for console-only programs like `RiffDOSParser.pas`.
+
+See `dosbox-verify/README.md` for building the RTL/compiler itself and for running the result in DOSBox-X.
 
 ## Code style guidelines
 
