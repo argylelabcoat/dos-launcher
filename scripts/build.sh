@@ -58,12 +58,19 @@ mkdir -p dosbox-verify/dosroot
 cp "$BUILD_DIR/RiffDOSParser.exe" dosbox-verify/dosroot/RIFFP.EXE
 echo "    -> dosbox-verify/dosroot/RIFFP.EXE"
 
+echo "==> Building MusicTest.exe (snips/MusicTest.pas, PC-speaker music verifier)"
+"$PPC" "${COMMON_FLAGS[@]}" -FE"$BUILD_DIR" snips/MusicTest.pas
+mkdir -p dosbox-verify/musicroot
+# 8.3-safe name: "MUSICTEST.EXE" is 9 chars and would surface as MUSICT~1.EXE in DOS.
+cp "$BUILD_DIR/MusicTest.exe" dosbox-verify/musicroot/MUSIC.EXE
+echo "    -> dosbox-verify/musicroot/MUSIC.EXE"
+
 cat <<'EOF'
 
 Build complete. Verify in DOSBox-X:
 
-  cd dosbox-verify
-  dosbox-x -conf test.conf -c "MOUNT C launcher_root" -c "C:" -c "LAUNCHER.EXE"
+  ./scripts/run.sh            # launcher
+  ./scripts/run.sh --music    # PC-speaker music verifier (MUSIC.EXE)
 
 See dosbox-verify/README.md for the RiffDOSParser fixture-testing flow.
 EOF
